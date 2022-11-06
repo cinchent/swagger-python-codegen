@@ -3,6 +3,8 @@
 """
 Generates Python SDK code from a Swagger (a.k.a. OpenAPI) API specification using 'swagger-codegen' open-source
 code templates.
+
+Copyright (c) 2022 CINCH Enterprises, Ltd. and Rod Pullmann.  All rights reserved.
 """
 import sys
 import os
