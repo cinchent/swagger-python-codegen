@@ -7,13 +7,15 @@
 setuptools/pip installer for swagger-python-codegen.
 """
 
+import sys
 from pathlib import Path
 from setuptools import (setup, find_packages)
 
+THISDIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(THISDIR))
+
 # noinspection PyPackageRequirements,PyUnresolvedReferences
 import swagger_python_codegen
-
-THISDIR = Path(__file__).resolve().parent
 
 setup(
     name='swagger_python_codegen',
@@ -34,5 +36,5 @@ setup(
     packages=find_packages(),
     install_requires=Path(THISDIR, 'requirements.txt').read_text(encoding='utf-8'),
     keywords="rest restful api flask swagger openapi generator",
-    scripts=['bin/swagger-python-codegen'],
+    scripts=[str(Path(THISDIR, 'bin/swagger-python-codegen'))],
 )
