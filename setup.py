@@ -15,7 +15,7 @@ THISDIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THISDIR))
 
 # noinspection PyPackageRequirements,PyUnresolvedReferences
-import swagger_python_codegen
+import swagger_python_codegen  # pylint:disable=wrong-import-position
 
 setup(
     name='swagger_python_codegen',

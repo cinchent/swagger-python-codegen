@@ -591,7 +591,7 @@ class Generator:
                 api_module = api_vars.get('classVarName')
                 if not api_module or not api_vars.get('operation'):
                     PRINT_VERBOSE(f"Ignoring vacuous API '{group_name}': no resources defined")
-                    del apis[group_name]  # pylint:unnecessary-dict-index-lookup
+                    del apis[group_name]  # pylint:disable=unnecessary-dict-index-lookup
                     continue
                 api_vars['operations'] = True
 
