@@ -25,8 +25,10 @@ try:
     import yaml
 except ImportError:
     yaml = None
+# noinspection PyPackageRequirements
 import pystache
 
+# noinspection PyUnresolvedReferences,PyPackageRequirements
 from swagger_python_codegen import __version__
 
 THISDIR = Path(__file__).resolve().parent
@@ -167,7 +169,7 @@ class Generator:
                 raise TypeError(f"Input file '{self.input_file}' exists, but you have no Python YAML support") from exc
 
         # Apply any specified fixes to Swagger specification.
-        if 'http' in self.params.fix:
+        if 'http_response' in self.params.fix:
             self.swagger_spec = self.fix_response_http_codes(self.swagger_spec)
 
         # Parse the top-level API info from the Swagger spec.
@@ -402,15 +404,20 @@ class Generator:
         for template_name, template_dest in self.template_dests.items():
             template_dest_path = self.output_base.joinpath(template_dest)
             self.template_firsts = {}
+            custom_renderer = getattr(self, f'render_{template_name}', None)
 
             # Simple file template: render content directly using simple renderer,
             template_vars = self.resolve_vars(self.template_vars[template_name])
             if not template_dest.endswith('/'):
                 if not self.check_output_overwrite(template_dest_path):
                     continue
-                output = self.renderer.render(self.templates[template_name], {**self.common_vars, **template_vars})
-                os.makedirs(template_dest_path.parent, exist_ok=True)
-                template_dest_path.write_text(output, encoding='utf-8')
+                template_vars = {**self.common_vars, **template_vars}
+                if callable(custom_renderer):
+                    custom_renderer(template_name, template_dest_path, template_vars)
+                else:
+                    output = self.renderer.render(self.templates[template_name], template_vars)
+                    os.makedirs(template_dest_path.parent, exist_ok=True)
+                    template_dest_path.write_text(output, encoding='utf-8')
                 PRINT(f"Generated '{template_name}' to '{template_dest}'")
                 continue
 
@@ -424,7 +431,6 @@ class Generator:
                 os.makedirs(template_dest_path, exist_ok=True)
 
             # Invoke custom renderer for each directory template.
-            custom_renderer = getattr(self, f'render_{template_name}', None)
             if not callable(custom_renderer):
                 raise NotImplementedError(f"ERROR: {custom_renderer}() not implemented; cannot continue")
             custom_renderer(template_name, template_dest_path, template_vars)
@@ -628,6 +634,24 @@ class Generator:
             raise RuntimeError(f"ERROR: Failure rendering template '{template_name}'"
                                f" (resource group '{group_name}'): {exc}") from exc
 
+    def render_api_client(self, template_name, template_dest_path, template_vars):
+        """ Renders the API client module for the SDK. """
+        content = self.renderer.render(self.templates[template_name], template_vars)
+        if 'thread_pool' in self.params.fix:
+            if 'def pool' in content:  # (newer template, using property for pool member)
+                setter = indent(dedent("""\
+                                       @pool.setter
+                                       def pool(self, _pool):
+                                           self._pool = _pool
+                                       """), 4 * ' ')
+                content = re.sub(r'(return *self._pool.*\n)', f"\\1\n{setter}", content)
+            else:  # (legacy, using attribute for pool member)
+                content = re.sub(r'\n( +)self\.pool *= *ThreadPool',
+                                 "from unittest.mock import Mock\n\\1self.\\2pool = Mock",
+                                 content)
+        os.makedirs(template_dest_path.parent, exist_ok=True)
+        template_dest_path.write_text(content, encoding='utf-8')
+
     def render_model_doc(self, template_name, template_dest_path, template_vars):
         """ Renders the SDK documentation for each defined model in the API. """
         PRINT_VERBOSE("--- Processing API models for documentation generation:")
@@ -791,7 +815,8 @@ def parse_args():
         PRINT(__version__)
         sys.exit(0)
 
-    desc, epilog = __doc__.split('\n\n', maxsplit=1)
+    desc, *epilog = __doc__.split('\n\n', maxsplit=1)
+    epilog = epilog[0] if epilog else ''
     parser = argparse.ArgumentParser(description='\n'.join(wrap(desc, width=80)).strip(),
                                      fromfile_prefix_chars='@',
                                      epilog=f"\nGenerator Properties:\n{indent(properties_table, '  ')}\n\n"
@@ -859,8 +884,11 @@ def parse_args():
                         help=dedent("""\
                             Specifies which optional fixes to apply before or during
                             generation; PROBLEM may be any or all of:
-                              http => makes HTTP response code specifications
-                                      consistent within input OpenAPI spec"""))
+                              http_response => makes HTTP response code specifications
+                                               consistent within input OpenAPI spec
+                              thread_pool => allows 'multiprocessing.ThreadPool'
+                                             instance in SDK API client object to be
+                                             modifiable (for client object copying)"""))
     parser.add_argument('--generate',
                         metavar='FEATURE', nargs='+', action='append', default=[],
                         help=dedent("""\
@@ -912,6 +940,7 @@ def parse_args():
 
     params.import_mappings = _parse_multi_params('import-mappings', params.import_mappings)
     params.generate = _parse_multi_params('generate', params.generate)
+    params.fix = _parse_multi_params('fix', params.fix)
 
     # noinspection PyArgumentList
     return ParsedArgs(params, unknown_args, settings)
