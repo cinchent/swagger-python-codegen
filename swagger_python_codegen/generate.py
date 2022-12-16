@@ -385,6 +385,23 @@ class Generator:
 
         return _fix({}, swagger_spec)
 
+    @staticmethod
+    def fix_module_initial_comments(rendered_text):
+        """ Corrects ill-formed module initial comments with well-formed ones. """
+        match = re.search(r'^#!', rendered_text, re.MULTILINE)
+        if match:
+            rendered_text = rendered_text[match.start():]
+        return rendered_text
+
+    def render(self, path, template, *context, **kwargs):
+        """
+        Wrapper for Pystache rendering method to automatically apply any generic post-rendering fixes specified.
+        """
+        output = self.renderer.render(template, *context, **kwargs)
+        if 'module_comment' in self.params.fix and Path(path).suffix == '.py':
+            output = self.fix_module_initial_comments(output)
+        return output
+
     def once(self, hashable):
         """ Rendering lambda: Renders a Mustache Section Context at most once during the rendering of a template. """
         never = hashable not in self.template_firsts
@@ -415,7 +432,7 @@ class Generator:
                 if callable(custom_renderer):
                     custom_renderer(template_name, template_dest_path, template_vars)
                 else:
-                    output = self.renderer.render(self.templates[template_name], template_vars)
+                    output = self.render(template_dest_path, self.templates[template_name], template_vars)
                     os.makedirs(template_dest_path.parent, exist_ok=True)
                     template_dest_path.write_text(output, encoding='utf-8')
                 PRINT(f"Generated '{template_name}' to '{template_dest}'")
@@ -479,7 +496,7 @@ class Generator:
                 model_path = template_dest_path.joinpath(model['modulename']).with_suffix('.py')
                 if not self.check_output_overwrite(model_path):
                     continue
-                output = self.renderer.render(template, {**self.common_vars, **template_vars, **dict(model=model)})
+                output = self.render(model_path, template, {**self.common_vars, **template_vars, **dict(model=model)})
                 model_path.write_text(output, encoding='utf-8')
                 PRINT_VERBOSE(f"Generated model '{model_name}' to '{template_dest_path}'")
 
@@ -606,7 +623,7 @@ class Generator:
                 api_path = template_dest_path.joinpath(api_module).with_suffix('.py')
                 if not self.check_output_overwrite(api_path):
                     continue
-                output = self.renderer.render(template, {**self.common_vars, **template_vars, **api_vars})
+                output = self.render(api_path, template, {**self.common_vars, **template_vars, **api_vars})
                 os.makedirs(api_path.parent, exist_ok=True)
                 api_path.write_text(output, encoding='utf-8')
                 PRINT_VERBOSE(f"Generated API '{group_name}' to '{template_dest_path}'")
@@ -636,7 +653,7 @@ class Generator:
 
     def render_api_client(self, template_name, template_dest_path, template_vars):
         """ Renders the API client module for the SDK. """
-        content = self.renderer.render(self.templates[template_name], template_vars)
+        content = self.render(template_dest_path, self.templates[template_name], template_vars)
         if 'thread_pool' in self.params.fix:
             if 'def pool' in content:  # (newer template, using property for pool member)
                 setter = indent(dedent("""\
@@ -668,8 +685,8 @@ class Generator:
                 docfile = template_dest_path.joinpath(model_classname).with_suffix('.md')
                 if not self.check_output_overwrite(docfile):
                     continue
-                output = self.renderer.render(self.templates[template_name],
-                                              {**self.common_vars, **dict(model=[model_vars]), **template_vars})
+                output = self.render(docfile, self.templates[template_name],
+                                     {**self.common_vars, **dict(model=[model_vars]), **template_vars})
                 os.makedirs(docfile.parent, exist_ok=True)
                 docfile.write_text(output, encoding='utf-8')
                 PRINT_VERBOSE(f"Generated '{template_name}' to '{docfile}'")
@@ -694,8 +711,8 @@ class Generator:
                 docfile = template_dest_path.joinpath(group_classname).with_suffix('.md')
                 if not self.check_output_overwrite(docfile):
                     continue
-                output = self.renderer.render(self.templates[template_name],
-                                              {**self.common_vars, **group_vars, **template_vars})
+                output = self.render(docfile, self.templates[template_name],
+                                     {**self.common_vars, **group_vars, **template_vars})
                 os.makedirs(docfile.parent, exist_ok=True)
                 docfile.write_text(output, encoding='utf-8')
                 PRINT_VERBOSE(f"Generated '{template_name}' to '{docfile}'")
@@ -720,8 +737,8 @@ class Generator:
                 testfile = template_dest_path.joinpath(f"test_{model_name}").with_suffix('.py')
                 if not self.check_output_overwrite(testfile):
                     continue
-                output = self.renderer.render(self.templates[template_name],
-                                              {**self.common_vars, **dict(model=[model_vars]), **template_vars})
+                output = self.render(testfile, self.templates[template_name],
+                                     {**self.common_vars, **dict(model=[model_vars]), **template_vars})
                 os.makedirs(testfile.parent, exist_ok=True)
                 testfile.write_text(output, encoding='utf-8')
                 PRINT_VERBOSE(f"Generated '{template_name}' to '{testfile}'")
@@ -746,8 +763,8 @@ class Generator:
                 testfile = template_dest_path.joinpath(f"test_{group_name}").with_suffix('.py')
                 if not self.check_output_overwrite(testfile):
                     continue
-                output = self.renderer.render(self.templates[template_name],
-                                              {**self.common_vars, **group_vars, **template_vars})
+                output = self.render(testfile, self.templates[template_name],
+                                     {**self.common_vars, **group_vars, **template_vars})
                 os.makedirs(testfile.parent, exist_ok=True)
                 testfile.write_text(output, encoding='utf-8')
                 PRINT_VERBOSE(f"Generated '{template_name}' to '{testfile}'")
@@ -884,6 +901,8 @@ def parse_args():
                         help=dedent("""\
                             Specifies which optional fixes to apply before or during
                             generation; PROBLEM may be any or all of:
+                              module_comment => replaces ill-formed module initial
+                                                comments with well-formed ones
                               http_response => makes HTTP response code specifications
                                                consistent within input OpenAPI spec
                               thread_pool => allows 'multiprocessing.ThreadPool'
