@@ -47,23 +47,23 @@ TEMPLATE_EXT = '.mustache'
 TEMPLATE_PARTIALS = [
     'partial_header'
 ]
-TemplateInfo = namedtuple('TemplateInfo', 'dest_fmt vars')
+TemplateInfo = namedtuple('TemplateInfo', 'dest_fmt vars options')
 TEMPLATES = dict(  # (ordering is significant)
-    model=TemplateInfo('{packageName}/{model_package}/', dict(hasMore=True)),
-    __init__model=TemplateInfo('{packageName}/{model_package}/__init__.py', {}),
-    api=TemplateInfo('{packageName}/{api_package}/', dict(operations=True, hasMore=True)),
-    __init__api=TemplateInfo('{packageName}/{api_package}/__init__.py', {}),
-    __init__package=TemplateInfo('{packageName}/__init__.py', {}),
-    api_client=TemplateInfo('{packageName}/api_client.py', dict(writeBinary=True)),
-    configuration=TemplateInfo('{packageName}/configuration.py', {}),
-    rest=TemplateInfo('{packageName}/rest.py', {}),
-    requirements=TemplateInfo('requirements.txt', {}),
-    setup=TemplateInfo('setup.py', {}),
+    model=TemplateInfo('{packageName}/{model_package}/', dict(hasMore=True), {}),
+    __init__model=TemplateInfo('{packageName}/{model_package}/__init__.py', {}, {}),
+    api=TemplateInfo('{packageName}/{api_package}/', dict(operations=True, hasMore=True), {}),
+    __init__api=TemplateInfo('{packageName}/{api_package}/__init__.py', {}, {}),
+    __init__package=TemplateInfo('{packageName}/__init__.py', {}, {}),
+    api_client=TemplateInfo('{packageName}/api_client.py', dict(writeBinary=True), {}),
+    configuration=TemplateInfo('{packageName}/configuration.py', {}, {}),
+    rest=TemplateInfo('{packageName}/rest.py', {}, {}),
+    requirements=TemplateInfo('requirements.txt', {}, {}),
+    setup=TemplateInfo('setup.py', {}, {}),
 )
 TEMPLATES_OPTIONAL = dict(  # (optional templates processed by '--generate' specification)
     docs={
-        'api_doc': TemplateInfo('docs/', {}),
-        'model_doc': TemplateInfo('docs/', {}),
+        'api_doc': TemplateInfo('docs/', {}, {}),
+        'model_doc': TemplateInfo('docs/', {}, {}),
         'README': TemplateInfo('README.md', dict(gitUserId="GIT_USER_ID",
                                                  gitRepoId="GIT_REPO_ID",
                                                  generatedDate=datetime.isoformat(datetime.now(), sep=' ',
@@ -72,28 +72,28 @@ TEMPLATES_OPTIONAL = dict(  # (optional templates processed by '--generate' spec
                                                  appVersion='{packageVersion}',
                                                  infoUrl='{packageUrl}',
                                                  hasMore=True,
-                                                 )),
+                                                 ), {}),
     },
     tests={
-        '__init__test': TemplateInfo('test/__init__.py', {}),
-        'api_test': TemplateInfo('test/', {}),
-        'model_test': TemplateInfo('test/', {}),
-        'test-requirements': TemplateInfo('test-requirements.txt', {}),
+        '__init__test': TemplateInfo('test/__init__.py', {}, {}),
+        'api_test': TemplateInfo('test/', {}, {}),
+        'model_test': TemplateInfo('test/', {}, {}),
+        'test-requirements': TemplateInfo('test-requirements.txt', {}, {}),
     },
     git={
-        'gitignore': TemplateInfo('.gitignore', {}),
+        'gitignore': TemplateInfo('.gitignore', {}, {}),
         'git_push.sh': TemplateInfo('git_push.sh', dict(gitUserId="GIT_USER_ID",
                                                         gitRepoId="GIT_REPO_ID",
-                                                        releaseNote="Minor update")),
-        'tox': TemplateInfo('tox.ini', {}),
+                                                        releaseNote="Minor update"), {}),
+        'tox': TemplateInfo('tox.ini', {}, {}),
     },
     travis={
-        'travis': TemplateInfo('.travis.yml', {}),
+        'travis': TemplateInfo('.travis.yml', {}, {}),
     },
 )
 TEMPLATES_ASYNC = {  # (optional templates processed by '--async_library' option)
-    'asyncio/rest': TemplateInfo('{packageName}/rest.py', dict(asyncio=True)),
-    'tornado/rest': TemplateInfo('{packageName}/rest.py', dict(tornado=True)),
+    'asyncio/rest': TemplateInfo('{packageName}/rest.py', dict(asyncio=True), {}),
+    'tornado/rest': TemplateInfo('{packageName}/rest.py', dict(tornado=True), {}),
 }
 
 
@@ -127,12 +127,12 @@ class TemplateReader:  # pylint:disable=too-few-public-methods
                 jar = None
             setattr(self, src, self.TemplateSource(src_path, base_path, jar))
 
-    def read(self, filename):
+    def read(self, filename, **options):
         """ Reads template file content from a directory or JAR, subject to override. """
         # noinspection PyUnusedLocal
         content, read_ok = None, False
         # First look for template in alternate (override) location, then in default location.
-        for src in ('alternate', 'location'):
+        for src in options.get('sources', ('alternate', 'location')):
             with suppress(Exception):
                 template_source = getattr(self, src)
                 path = Path(str(template_source.base_path.joinpath(filename)) + TEMPLATE_EXT)  # (not .with_suffix())
@@ -189,6 +189,10 @@ class Generator:
             if template_info:
                 TEMPLATES.update({template_name: template_info})
                 other_vars.update(template_info.vars)
+        else:
+            library = self.settings.get('library')
+            if library == GENERATOR_SETTINGS['library']['default']:
+                TEMPLATES['rest'] = TEMPLATES['rest']._replace(options=dict(sources=('location',)))
         self.common_vars = {**vars(self.params), **self.settings, **self.info, **other_vars}
         TEMPLATES.update({t: d for g in self.params.generate for t, d in TEMPLATES_OPTIONAL.get(g, {}).items()})
         self.template_dests = {k: v.dest_fmt.format(**self.common_vars) for k, v in TEMPLATES.items()}
@@ -211,7 +215,8 @@ class Generator:
         # Read all templates and partials.
         self.template_reader = TemplateReader(params.template_dir, alternate=TEMPLATE_OVERRIDE_DIR)
         partials = {template_file: self.template_reader.read(template_file) for template_file in TEMPLATE_PARTIALS}
-        self.templates = {template_file: self.template_reader.read(template_file) for template_file in TEMPLATES}
+        self.templates = {template_file: self.template_reader.read(template_file, **template_entry.options)
+                          for template_file, template_entry in TEMPLATES.items()}
 
         # Resolve all settings and parameters passed in common to all renderers.
         package_name = self.settings.get('packageName', '')
