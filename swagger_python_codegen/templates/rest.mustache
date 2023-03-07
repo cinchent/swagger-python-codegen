@@ -92,6 +92,14 @@ class RESTClientObject:  # pylint:disable=too-few-public-methods
         headers = headers or {}
         content_type = headers.setdefault('Content-Type', 'application/json')
 
+        for i, (k, v) in enumerate(query_params or []):
+            if isinstance(v, dict):
+                query_params[i] = (k, str(v))
+
+        for i, (k, v) in enumerate(post_params or []):
+            if isinstance(v, dict):
+                post_params[i] = (k, str(v))
+
         request_params = dict(params=query_params, headers=headers, stream=not _preload_content,
                               timeout=_request_timeout)
         if 'json' in content_type.lower():

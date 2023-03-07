@@ -17,7 +17,7 @@ Initial release to public.
 * Adds `--fix` recipe to correct non-canonical initial Python module comments
   post-text rendering due to misformatted templates inherited from the public
   `swagger-codegen` release.  This option causes well-formed initial comments
-  ti be proiduced, which consist of a U**x-compatible shell script shebang line
+  to be produced, which consist of a U**x-compatible shell script shebang line
   followed by a PEP 263-conformant character encoding specification
   (see `partial_header.mustache`).  All content currently generated presumes
   UTF-8 encoding, but alternate encodings may be supported in the future.
