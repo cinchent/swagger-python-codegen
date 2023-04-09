@@ -27,3 +27,5 @@ Initial release to public.
 * Adds Mustache template for `rest.py` to generate code to use Python 'requests'
   package instead of the default ('urllib3') as the underlying HTTP client agent,
   specified by `-D library=requests`.
+
+* Fixes misimplementation of snake_to_camel() utility function.

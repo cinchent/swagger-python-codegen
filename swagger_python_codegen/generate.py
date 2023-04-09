@@ -235,7 +235,7 @@ class Generator:
 
     @staticmethod
     def resolve_settings(settings):
-        """ Performs any necessary runtime validation/resolution fo generator settings. """
+        """ Performs any necessary runtime validation/resolution of generator settings. """
         return settings
 
     def resolve_params(self, params):
@@ -252,7 +252,7 @@ class Generator:
     def snake_to_camel(snake, capitalize=True):
         """ Utility function: Returns the camel-case identifier corresponding to a snake-case identifier. """
         camel = '_' if snake.startswith('_') else ''
-        camel += ''.join(s.capitalize() for i, s in enumerate(snake.lstrip('_').split('_')) if i > 0 or capitalize)
+        camel += ''.join(s.capitalize() if i or capitalize else s for i, s in enumerate(snake.lstrip('_').split('_')))
         return camel
 
     @staticmethod
