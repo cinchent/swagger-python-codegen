@@ -2,7 +2,7 @@
 Python-only replacement for the open-source `swagger-codegen` code generator
 (https://github.com/swagger-api/swagger-codegen).
 
-Copyright (c) 2022 CINCH Enterprises, Ltd. and Rod Pullmann.  All rights reserved.
+Copyright (c) 2022-2023 CINCH Enterprises, Ltd. and Rod Pullmann.  All rights reserved.
 
 ### Overview
 The `swagger-python-codegen` code generator will generate a Python 3.x SDK code

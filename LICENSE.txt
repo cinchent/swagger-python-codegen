@@ -276,5 +276,5 @@ version(s), and exceptions or additional permissions here}."
 
   You may add additional accurate notices of copyright ownership.
 
-Copyright (c) 2022  CINCH Enterprises, Ltd. and Rod Pullmann.
+Copyright (c) 2022-2023  CINCH Enterprises, Ltd. and Rod Pullmann.
 All rights reserved.

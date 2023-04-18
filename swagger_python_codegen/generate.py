@@ -4,8 +4,9 @@
 Generates Python SDK code from a Swagger (a.k.a. OpenAPI) API specification using 'swagger-codegen' open-source
 code templates.
 
-Copyright (c) 2022 CINCH Enterprises, Ltd. and Rod Pullmann.  All rights reserved.
+Copyright (c) 2022-2023 CINCH Enterprises, Ltd. and Rod Pullmann.  All rights reserved.
 """
+# pylint:disable=too-many-lines
 import sys
 import os
 import re
@@ -48,13 +49,17 @@ TEMPLATE_PARTIALS = [
     'partial_header'
 ]
 TemplateInfo = namedtuple('TemplateInfo', 'dest_fmt vars options')
+
+MultiprocessingLibraries = dict(multiprocessing=True, concurrent_futures=False)  # (default marked True)
+
 TEMPLATES = dict(  # (ordering is significant)
     model=TemplateInfo('{packageName}/{model_package}/', dict(hasMore=True), {}),
     __init__model=TemplateInfo('{packageName}/{model_package}/__init__.py', {}, {}),
     api=TemplateInfo('{packageName}/{api_package}/', dict(operations=True, hasMore=True), {}),
     __init__api=TemplateInfo('{packageName}/{api_package}/__init__.py', {}, {}),
     __init__package=TemplateInfo('{packageName}/__init__.py', {}, {}),
-    api_client=TemplateInfo('{packageName}/api_client.py', dict(writeBinary=True), {}),
+    api_client=TemplateInfo('{packageName}/api_client.py', {**dict(writeBinary=True),
+                                                            **MultiprocessingLibraries}, {}),
     configuration=TemplateInfo('{packageName}/configuration.py', {}, {}),
     rest=TemplateInfo('{packageName}/rest.py', {}, {}),
     requirements=TemplateInfo('requirements.txt', {}, {}),
@@ -193,6 +198,17 @@ class Generator:
             library = self.settings.get('library')
             if library == GENERATOR_SETTINGS['library']['default']:
                 TEMPLATES['rest'] = TEMPLATES['rest']._replace(options=dict(sources=('location',)))
+
+        multiprocessing_library = self.settings.get('multiprocessingLibrary')
+        if multiprocessing_library:
+            api_client_vars = TEMPLATES['api_client'].vars
+            for k in api_client_vars:
+                if k in MultiprocessingLibraries:
+                    api_client_vars[k] = k == multiprocessing_library
+            if sum(api_client_vars[k] for k in MultiprocessingLibraries) != 1:
+                raise ValueError(f"Exactly one of {set(MultiprocessingLibraries)} must be specified"
+                                 " for 'multiprocessingLibrary' option")
+
         self.common_vars = {**vars(self.params), **self.settings, **self.info, **other_vars}
         TEMPLATES.update({t: d for g in self.params.generate for t, d in TEMPLATES_OPTIONAL.get(g, {}).items()})
         self.template_dests = {k: v.dest_fmt.format(**self.common_vars) for k, v in TEMPLATES.items()}
@@ -817,6 +833,10 @@ GENERATOR_SETTINGS = dict(  # (defined to be compatible with 'swagger-codegen')
         type=str,
         help="Asynchronous library to use (one of: {asyncio, tornado}; None => neither)",
         default=None),
+    multiprocessingLibrary=dict(
+        type=str,
+        help=f"Multiprocessing library to use (one of: {set(MultiprocessingLibraries)})",
+        default=([k for k, v in MultiprocessingLibraries.items() if v] + [''])[0]),
 )
 
 ParsedArgs = namedtuple('ParsedArgs', 'params unknown settings')

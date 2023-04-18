@@ -29,3 +29,13 @@ Initial release to public.
   specified by `-D library=requests`.
 
 * Fixes misimplementation of snake_to_camel() utility function.
+
+### Version 0.0.4
+
+* Adds Mustache template for `api_client.py` to generate code to optionally use
+  Python 'concurrent.futures' package instead of the default ('multiprocessing')
+  as the underlying asynchronous request mechanism engaged by `async_req=True`,
+  specified by `-D multiprocessing=concurrent_futures`.
+
+* Adds capability to append additional -D options onto the `sdk-codegen.sh`
+  command line, interpreted by the 'generate' script.
