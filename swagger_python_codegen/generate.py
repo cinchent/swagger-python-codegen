@@ -197,6 +197,7 @@ class Generator:
         else:
             library = self.settings.get('library')
             if library == GENERATOR_SETTINGS['library']['default']:
+                # noinspection PyProtectedMember
                 TEMPLATES['rest'] = TEMPLATES['rest']._replace(options=dict(sources=('location',)))
 
         multiprocessing_library = self.settings.get('multiprocessingLibrary')
@@ -368,8 +369,10 @@ class Generator:
             value = (f"{varname}_example" if default is NotImplemented else
                      int(default) if typedef == 'int' else float(default))
         elif typedef == 'dict':
+            # noinspection PyTypeChecker
             value = f"dict(example_{varname}_item=...)" if default is NotImplemented else dict(default)
         elif typedef.startswith('list'):
+            # noinspection PyTypeChecker
             value = f"[example_{varname}_item, ...]" if default is NotImplemented else list(default)
         return str(value)
 
