@@ -21,7 +21,7 @@ setup(
     name='swagger_python_codegen',
     version=swagger_python_codegen.__version__,
     description="Swagger API SDK code generator for Python",
-    url="https://github.comcast.com/ea/ea_resource_manager_api",
+    url="https://github.com/cinchent/swagger-python-codegen",
     author="VIPER End-To-End Test (VET) Platform Automation (PA) Team",
     author_email='momus@comcast.com',
     classifiers=[
