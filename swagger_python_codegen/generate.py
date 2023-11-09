@@ -38,7 +38,7 @@ PRINT = print
 PRINT_VERBOSE = print
 
 GENERATOR_NAME = THISDIR.stem
-GENERATOR_URL = f"https://github.comcast.com/eapy/{GENERATOR_NAME}.git"
+GENERATOR_URL = f"https://github.com/comcast-eapy/{GENERATOR_NAME}.git"
 
 TEMPLATE_VERSION = os.getenv('SWAGGER_CODEGEN_VERSION', "3.0.35")
 TEMPLATE_DEFAULT = os.getenv('SWAGGER_CODEGEN_TEMPLATE_DEFAULT',
