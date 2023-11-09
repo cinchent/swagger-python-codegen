@@ -275,7 +275,8 @@ class Generator:
     @staticmethod
     def camel_to_snake(camel):
         """ Utility function: Returns the snake-case identifier corresponding to a camel-case identifier. """
-        return ''.join(f"_{s.lower()}" if i % 2 else s for i, s in enumerate(re.split(r'([A-Z])', camel))).lstrip('_')
+        return (''.join(f"_{s.lower()}" if i % 2 else s for i, s in enumerate(re.split(r'([A-Z])', camel))).lstrip('_')
+                if camel.upper() != camel else camel)
 
     @staticmethod
     def str_to_identifier(string, lowercase=True):
