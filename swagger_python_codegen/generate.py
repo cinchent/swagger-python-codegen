@@ -853,7 +853,7 @@ def parse_args():
 
     col = max(len(n) for n in GENERATOR_SETTINGS)
     properties_table = '\n'.join((fill(f"{pk:{col}s} {pv['help']}", width=78, subsequent_indent=' ' * (col + 1)) +
-                                  f"\n{'':{col+1}s}(default: {pv['default']})"
+                                  f"\n{'':{col + 1}s}(default: {pv['default']})"
                                   for pk, pv in GENERATOR_SETTINGS.items()))
 
     if '--version' in sys.argv or len(sys.argv) == 2 and sys.argv[1] == '-v':
@@ -974,7 +974,7 @@ def parse_args():
                     _n, *_v = _def.split('=')
                     _param_set[_n] = _v[0] if _v else None
                 except (Exception, BaseException) as exc:
-                    _opt = f"{'-'*min(len(_param_name),2)}{_param_name}"
+                    _opt = f"{'-' * min(len(_param_name), 2)}{_param_name}"
                     raise argparse.ArgumentTypeError(f"Bad specification for {_opt}: {_def}") from exc
         return _param_set
 
