@@ -18,7 +18,7 @@ sys.path.insert(0, str(THISDIR))
 import swagger_python_codegen  # pylint:disable=wrong-import-position
 
 setup(
-    name='swagger_python_codegen',
+    name='swagger-python-codegen',
     version=swagger_python_codegen.__version__,
     description="Swagger API SDK code generator for Python",
     url="https://github.com/cinchent/swagger-python-codegen",
